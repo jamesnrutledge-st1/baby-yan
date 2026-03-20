@@ -5,16 +5,15 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  // Debug mode: list available models
+  // Debug mode: list ALL available models
   if (req.query.debug === '1') {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
     const d = await r.json();
-    const imageModels = (d.models || []).filter(m =>
-      m.supportedGenerationMethods?.some(method =>
-        method.toLowerCase().includes('generate') || method.toLowerCase().includes('predict')
-      ) && (m.name?.toLowerCase().includes('imagen') || m.name?.toLowerCase().includes('image') || m.description?.toLowerCase().includes('image'))
-    ).map(m => ({ name: m.name, methods: m.supportedGenerationMethods }));
-    return res.status(200).json({ imageModels, total: d.models?.length });
+    const all = (d.models || []).map(m => ({
+      name: m.name,
+      methods: m.supportedGenerationMethods
+    }));
+    return res.status(200).json({ models: all, total: all.length });
   }
 
   const { prompt } = req.query;
