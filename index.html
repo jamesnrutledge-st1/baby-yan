@@ -83,59 +83,14 @@
       margin-bottom: 16px;
     }
 
-    .portrait-frame {
-      position: relative;
-      width: 320px;
-      height: 320px;
-      margin: 0 auto;
+    canvas#babyCanvas {
       border-radius: 50%;
-      overflow: hidden;
       box-shadow: 0 10px 50px rgba(0, 10, 60, 0.18);
       border: 5px solid #fff;
       outline: 2px solid #e2ddd8;
-      background: #dce8ff;
-    }
-
-    .portrait-frame img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
       display: block;
-      transition: opacity 0.5s ease;
-    }
-
-    .portrait-frame img.loading { opacity: 0; }
-
-    .portrait-loader {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      margin: 0 auto;
       background: #dce8ff;
-      transition: opacity 0.4s ease;
-      gap: 12px;
-    }
-
-    .portrait-loader.hidden { opacity: 0; pointer-events: none; }
-
-    .spinner {
-      width: 42px; height: 42px;
-      border: 3px solid rgba(0,35,149,0.15);
-      border-top-color: #002395;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .portrait-loader span {
-      font-family: 'Lato', sans-serif;
-      font-size: 0.75rem;
-      font-style: italic;
-      color: #88a;
-      letter-spacing: 0.1em;
     }
 
     .portrait-caption {
@@ -360,14 +315,8 @@
 
   <div class="main">
     <div class="portrait-section">
-      <p class="portrait-label" id="portraitLabel">Portrait officiel</p>
-      <div class="portrait-frame">
-        <img id="babyImg" class="loading" alt="Bébé Yan" />
-        <div class="portrait-loader" id="portraitLoader">
-          <div class="spinner"></div>
-          <span>génération en cours…</span>
-        </div>
-      </div>
+      <p class="portrait-label">Portrait officiel</p>
+      <canvas id="babyCanvas" width="320" height="320"></canvas>
       <div class="portrait-caption" id="portraitCaption">✦ Mini Yan ✦</div>
     </div>
 
@@ -395,60 +344,142 @@
 
   <script>
     // ═══════════════════════════════════════════════════════════
-    //  BABY PORTRAIT — via /api/generate (Vercel serverless)
+    //  BABY PORTRAIT — Canvas drawing of Baby Yan
     // ═══════════════════════════════════════════════════════════
-    async function generatePortrait(nameObj) {
-      const img     = document.getElementById('babyImg');
-      const loader  = document.getElementById('portraitLoader');
-      const caption = document.getElementById('portraitCaption');
-      const label   = document.getElementById('portraitLabel');
+    function generatePortrait(nameObj) {
+      const cv  = document.getElementById('babyCanvas');
+      const ctx = cv.getContext('2d');
+      const W = cv.width, H = cv.height;
+      const cx = 160, hx = cx, hy = 152, hrx = 76, hry = 83;
+      const hairBase = hy - hry + 8;
 
+      // Vary bg tint per gender
       const isGirl = nameObj.gender === 'girl';
-      const moods = {
-        'Classique':'smiling warmly','Intemporel':'calm and serene',
-        'Biblique':'peaceful and gentle','Moderne':'bright curious expression',
-        'Populaire':'laughing happily','Mixte':'playful expression',
-        'Traditionnel':'content and relaxed','Nordique':'wide-eyed and alert',
-        'Hébreu':'gentle soft smile','Européen':'sweet innocent look',
-        'Breton':'curious and bright','Romain':'confident and cheerful',
-        'Germanique':'strong and happy','Latin':'warm and joyful',
-        'Grec':'lively and bright','Nature':'fresh and happy',
-        'Basque':'radiant and warm','Français':'charming and joyful',
-      };
+      const bgA = isGirl ? '#fde8ee' : '#dce8ff';
+      const bgB = isGirl ? '#f4c0cc' : '#b8ccf4';
 
-      const mood   = moods[nameObj.tag] || 'smiling sweetly';
-      const hair   = isGirl ? 'fine wispy light brown hair with natural spikes' : 'spiky light brown hair standing up naturally';
-      const outfit = isGirl ? 'soft pink floral baby outfit' : 'navy blue baby sweater';
-      const prompt = [
-        `adorable ${isGirl ? 'baby girl' : 'baby boy'}`,
-        hair, 'tiny rectangular thin metal glasses', 'blue green eyes',
-        'chubby rosy cheeks', outfit, mood,
-        'being held by parent in bright modern living room',
-        'warm natural window light', 'photorealistic portrait photography',
-        'Canon 85mm f/1.8 shallow depth of field', 'ultra sharp focus on face',
-      ].join(', ');
+      // Background
+      const bg = ctx.createRadialGradient(cx, 130, 10, cx, 170, 220);
+      bg.addColorStop(0, bgA); bg.addColorStop(1, bgB);
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-      const seed = nameObj.name.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 9999999;
+      // Stars
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      [[38,28],[272,44],[288,195],[28,210],[148,12],[58,155],[262,130]].forEach(([x,y]) => {
+        ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fill();
+      });
 
-      label.textContent = `Portrait — ${nameObj.name}`;
-      caption.textContent = `✦ Bébé ${nameObj.name.charAt(0) + nameObj.name.slice(1).toLowerCase()} ✦`;
-
-      img.classList.add('loading');
-      loader.classList.remove('hidden');
-
-      try {
-        const url = `/api/generate?prompt=${encodeURIComponent(prompt)}&seed=${seed}`;
-        const res = await fetch(url);
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `HTTP ${res.status}`);
-        }
-        const blob = await res.blob();
-        img.onload = () => { img.classList.remove('loading'); loader.classList.add('hidden'); };
-        img.src = URL.createObjectURL(blob);
-      } catch (err) {
-        loader.querySelector('span').textContent = err.message || 'erreur';
+      // Onesie
+      ctx.beginPath(); ctx.ellipse(cx,286,72,42,0,0,Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(cx,286,72,42,0,0,Math.PI*2); ctx.clip();
+      if (isGirl) {
+        ctx.fillStyle = '#ED2939'; ctx.fillRect(cx-72,244,48,84);
+        ctx.fillStyle = '#ffb6c8'; ctx.fillRect(cx+24,244,48,84);
+      } else {
+        ctx.fillStyle = '#002395'; ctx.fillRect(cx-72,244,48,84);
+        ctx.fillStyle = '#ED2939'; ctx.fillRect(cx+24,244,48,84);
       }
+      ctx.restore();
+
+      // Neck
+      ctx.fillStyle = '#f5be88'; ctx.fillRect(hx-16, hy+hry-4, 32, 24);
+
+      // Head
+      ctx.beginPath(); ctx.ellipse(hx,hy,hrx,hry,0,0,Math.PI*2);
+      ctx.fillStyle = '#f5be88'; ctx.fill();
+
+      // Ears
+      ctx.beginPath(); ctx.ellipse(hx-hrx-10,hy+4,17,21,-0.12,0,Math.PI*2);
+      ctx.fillStyle='#f5be88'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx-hrx-10,hy+4,10,13,-0.12,0,Math.PI*2);
+      ctx.fillStyle='#e8a868'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx+hrx+10,hy+4,17,21,0.12,0,Math.PI*2);
+      ctx.fillStyle='#f5be88'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx+hrx+10,hy+4,10,13,0.12,0,Math.PI*2);
+      ctx.fillStyle='#e8a868'; ctx.fill();
+
+      // Cheek blush
+      ctx.save(); ctx.globalAlpha=0.32; ctx.fillStyle = isGirl ? '#ff6088' : '#ff8888';
+      ctx.beginPath(); ctx.ellipse(hx-56,hy+22,26,17,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx+56,hy+22,26,17,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+
+      // Eyes
+      const eyeY=hy-14, eyeLX=hx-27, eyeRX=hx+27;
+      function drawEye(ex,ey,d) {
+        ctx.beginPath(); ctx.ellipse(ex,ey,18,15,0,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex+d*2,ey+1,11,11,0,0,Math.PI*2); ctx.fillStyle='#5a8fb0'; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex+d*2,ey+1,6.5,6.5,0,0,Math.PI*2); ctx.fillStyle='#111e2c'; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex+d*2+4,ey-3,2.8,2.8,0,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+        ctx.beginPath(); ctx.ellipse(ex,ey,18,15,0,Math.PI,Math.PI*2); ctx.strokeStyle='rgba(0,0,0,0.55)'; ctx.lineWidth=2; ctx.stroke();
+      }
+      drawEye(eyeLX,eyeY,-1); drawEye(eyeRX,eyeY,1);
+
+      // Glasses
+      const gY=eyeY-14,gH=28,glX=eyeLX-23,glW=46,grX=eyeRX-23,grW=46;
+      ctx.strokeStyle='#9a9898'; ctx.lineWidth=2.2; ctx.lineJoin='round';
+      ctx.strokeRect(glX,gY,glW,gH); ctx.strokeRect(grX,gY,grW,gH);
+      ctx.beginPath(); ctx.moveTo(glX+glW,gY+gH/2); ctx.lineTo(grX,gY+gH/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(glX,gY+gH/2); ctx.lineTo(hx-hrx-6,hy-12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(grX+grW,gY+gH/2); ctx.lineTo(hx+hrx+6,hy-12); ctx.stroke();
+
+      // Nose
+      ctx.beginPath(); ctx.ellipse(hx,hy+14,8,6,0,0,Math.PI*2); ctx.fillStyle='#e8a868'; ctx.fill();
+      ctx.fillStyle='rgba(0,0,0,0.14)';
+      ctx.beginPath(); ctx.ellipse(hx-3.5,hy+16,2.5,2,-0.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(hx+3.5,hy+16,2.5,2,0.3,0,Math.PI*2); ctx.fill();
+
+      // Mouth
+      ctx.beginPath(); ctx.moveTo(hx-16,hy+30); ctx.quadraticCurveTo(hx,hy+44,hx+16,hy+30);
+      ctx.strokeStyle='rgba(0,0,0,0.42)'; ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(hx,hy+38,7,4.5,0,0,Math.PI*2); ctx.fillStyle='#d96060'; ctx.fill();
+
+      // Stubble
+      ctx.fillStyle='rgba(72,44,22,0.36)';
+      [[hx-16,hy+50],[hx-8,hy+52],[hx,hy+54],[hx+8,hy+52],[hx+16,hy+50],
+       [hx-20,hy+46],[hx-12,hy+48],[hx+5,hy+48],[hx+13,hy+46],[hx+20,hy+46],
+       [hx-26,hy+40],[hx-18,hy+42],[hx-4,hy+44],[hx+6,hy+44],[hx+18,hy+42],[hx+26,hy+40],
+       [hx-11,hy+23],[hx-5,hy+21],[hx+5,hy+21],[hx+11,hy+23],
+       [hx-33,hy+26],[hx-37,hy+32],[hx+33,hy+26],[hx+37,hy+32],
+      ].forEach(([x,y])=>{ ctx.beginPath(); ctx.arc(x,y,1.4,0,Math.PI*2); ctx.fill(); });
+
+      // Hair base
+      ctx.fillStyle='#3a2210';
+      ctx.beginPath(); ctx.ellipse(hx,hy-hry+15,hrx-2,22,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(hx-hrx+4,hy-40); ctx.quadraticCurveTo(hx,hy-hry-2,hx+hrx-4,hy-40);
+      ctx.lineTo(hx+hrx,hy-50); ctx.lineTo(hx-hrx,hy-50); ctx.closePath(); ctx.fill();
+
+      // Spikes
+      [{bx:hx-58,by:hairBase,tx:hx-72,ty:hairBase-50,hw:19},
+       {bx:hx-38,by:hairBase-4,tx:hx-46,ty:hairBase-64,hw:22},
+       {bx:hx-14,by:hairBase-6,tx:hx-12,ty:hairBase-72,hw:24},
+       {bx:hx+12,by:hairBase-6,tx:hx+16,ty:hairBase-68,hw:22},
+       {bx:hx+36,by:hairBase-4,tx:hx+48,ty:hairBase-58,hw:20},
+       {bx:hx+56,by:hairBase,tx:hx+64,ty:hairBase-46,hw:17},
+      ].forEach(s=>{
+        ctx.beginPath(); ctx.moveTo(s.bx-s.hw/2,s.by); ctx.lineTo(s.tx,s.ty); ctx.lineTo(s.bx+s.hw/2,s.by);
+        ctx.closePath(); ctx.fillStyle='#3a2210'; ctx.fill();
+      });
+
+      // Beret
+      ctx.save(); ctx.translate(hx+48,hairBase-38); ctx.rotate(0.42);
+      ctx.beginPath(); ctx.ellipse(0,0,34,11,0,0,Math.PI*2); ctx.fillStyle='#001e80'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-4,-4,26,20,-0.15,0,Math.PI); ctx.fill();
+      ctx.beginPath(); ctx.arc(-6,-22,4.5,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+
+      // Face glow
+      const glow=ctx.createRadialGradient(hx-18,hy-50,0,hx-18,hy-50,85);
+      glow.addColorStop(0,'rgba(255,255,255,0.14)'); glow.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.save(); ctx.beginPath(); ctx.ellipse(hx,hy,hrx,hry,0,0,Math.PI*2); ctx.clip();
+      ctx.fillStyle=glow; ctx.fill(); ctx.restore();
+
+      // Update caption
+      document.getElementById('portraitCaption').textContent =
+        `✦ Bébé ${nameObj.name.charAt(0) + nameObj.name.slice(1).toLowerCase()} ✦`;
     }
 
 
