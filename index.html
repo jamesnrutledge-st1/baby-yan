@@ -146,6 +146,73 @@
       letter-spacing: 0.1em;
     }
 
+    /* ── API key prompt ── */
+    .api-prompt {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 22px;
+      background: #eef2ff;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .api-prompt p {
+      font-size: 0.78rem;
+      color: #556;
+      line-height: 1.5;
+      font-family: 'Lato', sans-serif;
+    }
+
+    .api-prompt a {
+      font-size: 0.72rem;
+      color: #002395;
+      text-decoration: none;
+    }
+
+    .api-prompt a:hover { text-decoration: underline; }
+
+    .api-prompt input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid #c0c8e8;
+      border-radius: 7px;
+      font-size: 0.72rem;
+      font-family: monospace;
+      color: #333;
+      outline: none;
+      background: #fff;
+    }
+
+    .api-prompt input:focus { border-color: #002395; }
+
+    .api-prompt button {
+      padding: 8px 18px;
+      background: #002395;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.78rem;
+      font-family: 'Lato', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+
+    .key-clear {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 0.68rem;
+      color: #bbb;
+      cursor: pointer;
+      font-style: italic;
+    }
+
+    .key-clear:hover { color: #888; }
+
     /* ── Generator ── */
     .generator-section { padding-top: 4px; }
 
@@ -296,12 +363,21 @@
       <p class="portrait-label" id="portraitLabel">Portrait officiel</p>
       <div class="portrait-frame">
         <img id="babyImg" class="loading" alt="Bébé Yan" />
-        <div class="portrait-loader" id="portraitLoader">
+        <div class="portrait-loader hidden" id="portraitLoader">
           <div class="spinner"></div>
           <span>génération en cours…</span>
         </div>
+        <div class="api-prompt" id="apiPrompt">
+          <p>Entrez votre clé <strong>Together.ai</strong> pour générer les portraits</p>
+          <a href="https://api.together.ai" target="_blank">Obtenir une clé gratuite →</a>
+          <input type="password" id="apiKeyInput" placeholder="Coller la clé ici…" />
+          <button onclick="saveApiKey()">Sauvegarder</button>
+        </div>
       </div>
-      <div class="portrait-caption" id="portraitCaption">✦ Mini Yan ✦</div>
+      <div class="portrait-caption" id="portraitCaption">
+        ✦ Mini Yan ✦
+        <span class="key-clear" id="keyClear" onclick="clearApiKey()" style="display:none">changer la clé</span>
+      </div>
     </div>
 
     <div class="generator-section">
@@ -328,44 +404,60 @@
 
   <script>
     // ═══════════════════════════════════════════════════════════
-    //  BABY PORTRAIT — AI-generated via Pollinations
+    //  API KEY MANAGEMENT
     // ═══════════════════════════════════════════════════════════
-    function generatePortrait(nameObj) {
-      const img    = document.getElementById('babyImg');
-      const loader = document.getElementById('portraitLoader');
-      const caption = document.getElementById('portraitCaption');
+    function saveApiKey() {
+      const val = document.getElementById('apiKeyInput').value.trim();
+      if (!val) return;
+      localStorage.setItem('together_key', val);
+      document.getElementById('apiPrompt').style.display = 'none';
+      document.getElementById('keyClear').style.display = 'inline';
+      generateNames();
+    }
+
+    function clearApiKey() {
+      localStorage.removeItem('together_key');
+      document.getElementById('apiKeyInput').value = '';
+      document.getElementById('apiPrompt').style.display = 'flex';
+      document.getElementById('keyClear').style.display = 'none';
+      document.getElementById('babyImg').classList.add('loading');
+    }
+
+    function initApiKey() {
+      if (localStorage.getItem('together_key')) {
+        document.getElementById('apiPrompt').style.display = 'none';
+        document.getElementById('keyClear').style.display = 'inline';
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  BABY PORTRAIT — AI-generated via Together.ai FLUX
+    // ═══════════════════════════════════════════════════════════
+    async function generatePortrait(nameObj) {
+      const apiKey = localStorage.getItem('together_key');
+      if (!apiKey) return;
+
+      const img     = document.getElementById('babyImg');
+      const loader  = document.getElementById('portraitLoader');
+      const caption = document.getElementById('portraitCaption').childNodes[0];
       const label   = document.getElementById('portraitLabel');
 
       const isGirl = nameObj.gender === 'girl';
 
-      // Vary the prompt slightly per name for different expressions/moods
       const moods = {
-        'Classique': 'smiling warmly',
-        'Intemporel': 'calm and serene',
-        'Biblique': 'peaceful and gentle',
-        'Moderne': 'bright curious expression',
-        'Populaire': 'laughing happily',
-        'Mixte': 'playful expression',
-        'Traditionnel': 'content and relaxed',
-        'Nordique': 'wide-eyed and alert',
-        'Hébreu': 'gentle soft smile',
-        'Européen': 'sweet innocent look',
-        'Breton': 'curious and bright',
-        'Romain': 'confident and cheerful',
-        'Germanique': 'strong and happy',
-        'Latin': 'warm and joyful',
-        'Grec': 'lively and bright',
-        'Nature': 'fresh and happy',
-        'Basque': 'radiant and warm',
-        'Français': 'charming and joyful',
+        'Classique':'smiling warmly','Intemporel':'calm and serene',
+        'Biblique':'peaceful and gentle','Moderne':'bright curious expression',
+        'Populaire':'laughing happily','Mixte':'playful expression',
+        'Traditionnel':'content and relaxed','Nordique':'wide-eyed and alert',
+        'Hébreu':'gentle soft smile','Européen':'sweet innocent look',
+        'Breton':'curious and bright','Romain':'confident and cheerful',
+        'Germanique':'strong and happy','Latin':'warm and joyful',
+        'Grec':'lively and bright','Nature':'fresh and happy',
+        'Basque':'radiant and warm','Français':'charming and joyful',
       };
-      const mood = moods[nameObj.tag] || 'smiling sweetly';
-      const hair = isGirl
-        ? 'fine wispy light brown hair with natural spikes'
-        : 'spiky light brown hair standing up naturally';
-      const outfit = isGirl
-        ? 'soft pink floral baby outfit'
-        : 'navy blue baby sweater';
+      const mood   = moods[nameObj.tag] || 'smiling sweetly';
+      const hair   = isGirl ? 'fine wispy light brown hair with natural spikes' : 'spiky light brown hair standing up naturally';
+      const outfit = isGirl ? 'soft pink floral baby outfit' : 'navy blue baby sweater';
 
       const prompt = [
         `adorable ${isGirl ? 'baby girl' : 'baby boy'}`,
@@ -375,34 +467,51 @@
         'chubby rosy cheeks',
         outfit,
         mood,
-        'being held in bright modern living room',
+        'being held by parent in bright modern living room',
         'warm natural window light',
         'photorealistic portrait photography',
-        'Canon 85mm f/1.8 bokeh background',
+        'Canon 85mm f/1.8 shallow depth of field',
         'ultra sharp focus on face',
       ].join(', ');
 
-      // Deterministic seed from name string so same name = same image
       const seed = nameObj.name.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 9999999;
 
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
+      label.textContent = `Portrait — ${nameObj.name}`;
+      if (caption) caption.textContent = `✦ Bébé ${nameObj.name.charAt(0) + nameObj.name.slice(1).toLowerCase()} ✦ `;
 
-      // Show loader
       img.classList.add('loading');
       loader.classList.remove('hidden');
-      label.textContent = `Portrait — ${nameObj.name}`;
-      caption.textContent = `✦ Bébé ${nameObj.name.charAt(0) + nameObj.name.slice(1).toLowerCase()} ✦`;
 
-      const fresh = new Image();
-      fresh.onload = () => {
-        img.src = fresh.src;
-        img.classList.remove('loading');
-        loader.classList.add('hidden');
-      };
-      fresh.onerror = () => {
-        loader.querySelector('span').textContent = 'image indisponible';
-      };
-      fresh.src = url;
+      try {
+        const res = await fetch('https://api.together.xyz/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'black-forest-labs/FLUX.1-schnell-Free',
+            prompt,
+            width: 512,
+            height: 512,
+            steps: 4,
+            n: 1,
+            seed,
+            response_format: 'b64_json',
+          }),
+        });
+
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message || 'API error');
+
+        const b64 = data.data?.[0]?.b64_json;
+        if (!b64) throw new Error('No image returned');
+
+        img.onload = () => { img.classList.remove('loading'); loader.classList.add('hidden'); };
+        img.src = `data:image/png;base64,${b64}`;
+      } catch (err) {
+        loader.querySelector('span').textContent = err.message || 'erreur';
+      }
     }
 
 
@@ -505,7 +614,8 @@
       generatePortrait(selected[0]);
     }
 
-    // Generate on load
+    // Init
+    initApiKey();
     generateNames();
   </script>
 </body>
