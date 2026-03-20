@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bébé Yan — Générateur de Prénoms Français</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lato', sans-serif;
+      background: #f8f7f5;
+      color: #2c2c2c;
+      min-height: 100vh;
+    }
+
+    .tricolor {
+      height: 7px;
+      background: linear-gradient(to right, #002395 33.33%, #ffffff 33.33% 66.66%, #ED2939 66.66%);
+    }
+
+    header {
+      text-align: center;
+      padding: 44px 20px 16px;
+    }
+
+    .header-eyebrow {
+      font-family: 'Lato', sans-serif;
+      font-weight: 300;
+      font-style: italic;
+      color: #aaa;
+      letter-spacing: 0.18em;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: #12122a;
+      line-height: 1.1;
+    }
+
+    header h1 em {
+      color: #ED2939;
+      font-style: italic;
+    }
+
+    header p {
+      margin-top: 10px;
+      color: #999;
+      font-size: 0.92rem;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+    }
+
+    .main {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    @media (max-width: 740px) {
+      .main { grid-template-columns: 1fr; gap: 32px; }
+      header h1 { font-size: 2.2rem; }
+    }
+
+    /* ── Portrait ── */
+    .portrait-section { text-align: center; }
+
+    .portrait-label {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-size: 1.05rem;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .portrait-frame {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin: 0 auto;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 10px 50px rgba(0, 10, 60, 0.18);
+      border: 5px solid #fff;
+      outline: 2px solid #e2ddd8;
+      background: #dce8ff;
+    }
+
+    .portrait-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.5s ease;
+    }
+
+    .portrait-frame img.loading { opacity: 0; }
+
+    .portrait-loader {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #dce8ff;
+      transition: opacity 0.4s ease;
+      gap: 12px;
+    }
+
+    .portrait-loader.hidden { opacity: 0; pointer-events: none; }
+
+    .spinner {
+      width: 42px; height: 42px;
+      border: 3px solid rgba(0,35,149,0.15);
+      border-top-color: #002395;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .portrait-loader span {
+      font-family: 'Lato', sans-serif;
+      font-size: 0.75rem;
+      font-style: italic;
+      color: #88a;
+      letter-spacing: 0.1em;
+    }
+
+    .portrait-caption {
+      margin-top: 14px;
+      font-size: 0.75rem;
+      color: #bbb;
+      font-style: italic;
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Generator ── */
+    .generator-section { padding-top: 4px; }
+
+    .generator-section h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.7rem;
+      color: #12122a;
+      margin-bottom: 6px;
+    }
+
+    .generator-section .tagline {
+      color: #aaa;
+      font-size: 0.88rem;
+      margin-bottom: 28px;
+      font-weight: 300;
+      font-style: italic;
+    }
+
+    .gender-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .gender-btn {
+      flex: 1;
+      padding: 10px 6px;
+      border: 2px solid #ddd;
+      background: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999;
+      transition: all 0.18s;
+    }
+
+    .gender-btn:hover { border-color: #555; color: #333; }
+
+    .gender-btn.boy  { background: #002395; border-color: #002395; color: #fff; }
+    .gender-btn.girl { background: #ED2939; border-color: #ED2939; color: #fff; }
+    .gender-btn.both { background: #2c2c4a; border-color: #2c2c4a; color: #fff; }
+
+    .generate-btn {
+      width: 100%;
+      padding: 15px;
+      background: #12122a;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-style: italic;
+      cursor: pointer;
+      transition: all 0.22s;
+      margin-bottom: 26px;
+      letter-spacing: 0.04em;
+    }
+
+    .generate-btn:hover {
+      background: #002395;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 35, 149, 0.28);
+    }
+
+    .generate-btn:active { transform: translateY(0); }
+
+    .names-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .name-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 22px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border-left: 5px solid #002395;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.38s ease, transform 0.38s ease;
+    }
+
+    .name-card.visible { opacity: 1; transform: translateY(0); }
+    .name-card.girl    { border-left-color: #ED2939; }
+
+    .name-card .name {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #12122a;
+      letter-spacing: 0.12em;
+    }
+
+    .name-card .meaning {
+      font-size: 0.78rem;
+      color: #aaa;
+      margin-top: 1px;
+      font-style: italic;
+    }
+
+    .name-card .desc {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 9px;
+      line-height: 1.55;
+      font-weight: 300;
+    }
+
+    .name-card .tag {
+      display: inline-block;
+      margin-top: 9px;
+      padding: 3px 11px;
+      background: #f0f0f8;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      color: #777;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px 20px 40px;
+      font-size: 0.78rem;
+      color: #ccc;
+      font-style: italic;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="tricolor"></div>
+
+  <header>
+    <p class="header-eyebrow">Pour Yan &amp; sa famille</p>
+    <h1>Bébé <em>Yan</em></h1>
+    <p>Générateur de prénoms français en trois lettres</p>
+  </header>
+
+  <div class="main">
+    <div class="portrait-section">
+      <p class="portrait-label" id="portraitLabel">Portrait officiel</p>
+      <div class="portrait-frame">
+        <img id="babyImg" class="loading" alt="Bébé Yan" />
+        <div class="portrait-loader" id="portraitLoader">
+          <div class="spinner"></div>
+          <span>génération en cours…</span>
+        </div>
+      </div>
+      <div class="portrait-caption" id="portraitCaption">✦ Mini Yan ✦</div>
+    </div>
+
+    <div class="generator-section">
+      <h2>Trouver le bon prénom</h2>
+      <p class="tagline">Trois lettres seulement — comme papa l'exige.</p>
+
+      <div class="gender-toggle">
+        <button class="gender-btn boy" onclick="setGender('boy', this)">Garçon</button>
+        <button class="gender-btn" onclick="setGender('girl', this)">Fille</button>
+        <button class="gender-btn" onclick="setGender('both', this)">Mixte</button>
+      </div>
+
+      <button class="generate-btn" onclick="generateNames()">
+        ✦ Générer des prénoms ✦
+      </button>
+
+      <div class="names-container" id="namesContainer"></div>
+    </div>
+  </div>
+
+  <footer>
+    Fait avec amour pour Yan &amp; sa future famille &nbsp;—&nbsp; Bonne chance ! 🇫🇷
+  </footer>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════
+    //  BABY PORTRAIT — AI-generated via Pollinations
+    // ═══════════════════════════════════════════════════════════
+    function generatePortrait(nameObj) {
+      const img    = document.getElementById('babyImg');
+      const loader = document.getElementById('portraitLoader');
+      const caption = document.getElementById('portraitCaption');
+      const label   = document.getElementById('portraitLabel');
+
+      const isGirl = nameObj.gender === 'girl';
+
+      // Vary the prompt slightly per name for different expressions/moods
+      const moods = {
+        'Classique': 'smiling warmly',
+        'Intemporel': 'calm and serene',
+        'Biblique': 'peaceful and gentle',
+        'Moderne': 'bright curious expression',
+        'Populaire': 'laughing happily',
+        'Mixte': 'playful expression',
+        'Traditionnel': 'content and relaxed',
+        'Nordique': 'wide-eyed and alert',
+        'Hébreu': 'gentle soft smile',
+        'Européen': 'sweet innocent look',
+        'Breton': 'curious and bright',
+        'Romain': 'confident and cheerful',
+        'Germanique': 'strong and happy',
+        'Latin': 'warm and joyful',
+        'Grec': 'lively and bright',
+        'Nature': 'fresh and happy',
+        'Basque': 'radiant and warm',
+        'Français': 'charming and joyful',
+      };
+      const mood = moods[nameObj.tag] || 'smiling sweetly';
+      const hair = isGirl
+        ? 'fine wispy light brown hair with natural spikes'
+        : 'spiky light brown hair standing up naturally';
+      const outfit = isGirl
+        ? 'soft pink floral baby outfit'
+        : 'navy blue baby sweater';
+
+      const prompt = [
+        `adorable ${isGirl ? 'baby girl' : 'baby boy'}`,
+        hair,
+        'tiny rectangular thin metal glasses',
+        'blue green eyes',
+        'chubby rosy cheeks',
+        outfit,
+        mood,
+        'being held in bright modern living room',
+        'warm natural window light',
+        'photorealistic portrait photography',
+        'Canon 85mm f/1.8 bokeh background',
+        'ultra sharp focus on face',
+      ].join(', ');
+
+      // Deterministic seed from name string so same name = same image
+      const seed = nameObj.name.split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 9999999;
+
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
+
+      // Show loader
+      img.classList.add('loading');
+      loader.classList.remove('hidden');
+      label.textContent = `Portrait — ${nameObj.name}`;
+      caption.textContent = `✦ Bébé ${nameObj.name.charAt(0) + nameObj.name.slice(1).toLowerCase()} ✦`;
+
+      const fresh = new Image();
+      fresh.onload = () => {
+        img.src = fresh.src;
+        img.classList.remove('loading');
+        loader.classList.add('hidden');
+      };
+      fresh.onerror = () => {
+        loader.querySelector('span').textContent = 'image indisponible';
+      };
+      fresh.src = url;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════
+    //  NAME DATA — French 3-letter names
+    // ═══════════════════════════════════════════════════════════
+    const NAMES = {
+      boy: [
+        { name:'LÉO', meaning:'Du latin "leo", lion',                   desc:'Vaillant et courageux, comme un petit lion parisien.',              tag:'Classique'    },
+        { name:'LUC', meaning:'Du latin "lux", lumière',                desc:'Porteur de lumière, vif et brillant en toute situation.',           tag:'Intemporel'   },
+        { name:'NOÉ', meaning:"De l'hébreu, repos",                     desc:'Paisible et sage, une âme douce qui sait écouter.',                 tag:'Biblique'     },
+        { name:'MAX', meaning:'Du latin "maximus", le plus grand',      desc:'Ambitieux et fort, destiné à de grandes choses.',                   tag:'Moderne'      },
+        { name:'TOM', meaning:"De l'araméen, jumeau",                   desc:'Chaleureux et fidèle, ami sincère de tous.',                        tag:'Populaire'    },
+        { name:'LOU', meaning:'Du germanique, guerrier célèbre',        desc:'Noble et libre, un esprit aventurier irrésistible.',                tag:'Mixte'        },
+        { name:'GUY', meaning:'Du germanique "widu", forêt',            desc:'Naturel et libre comme le vent dans les bois.',                     tag:'Traditionnel' },
+        { name:'AXE', meaning:'Du nordique, paix divine',               desc:'Serein et fort, une présence rassurante et solide.',                tag:'Nordique'     },
+        { name:'RAF', meaning:"De l'hébreu, Dieu guérit",              desc:'Généreux et bienveillant, un cœur en or pur.',                      tag:'Hébreu'       },
+        { name:'JAN', meaning:"De l'hébreu, Dieu est gracieux",        desc:"Humble et sincère, une âme d'une grande pureté.",                   tag:'Européen'     },
+        { name:'AEL', meaning:'Du breton, ange lumineux',               desc:'Mystérieux et rayonnant, fierté de la Bretagne.',                   tag:'Breton'       },
+        { name:'VIC', meaning:'Du latin "victoria", victoire',          desc:'Déterminé et gagnant, toujours au sommet.',                         tag:'Romain'       },
+        { name:'GUS', meaning:'Du nordique, unique',                    desc:'Original et solide, un caractère bien trempé.',                     tag:'Nordique'     },
+        { name:'ROD', meaning:'Du germanique, gloire',                  desc:'Fier et distingué, un futur grand homme.',                          tag:'Germanique'   },
+        { name:'ELI', meaning:"De l'hébreu, mon Dieu est élevé",       desc:'Spirituel et doux, une sagesse intérieure rare.',                   tag:'Hébreu'       },
+        { name:'DAN', meaning:"De l'hébreu, juge",                     desc:'Juste et équitable, un esprit clair et sûr.',                       tag:'Biblique'     },
+      ],
+      girl: [
+        { name:'ZOÉ', meaning:'Du grec "zōé", vie',                    desc:'Pétillante et énergique, pleine de joie de vivre.',                 tag:'Grec'         },
+        { name:'LÉA', meaning:"De l'hébreu, douce",                    desc:'Contemplative et sensible, une âme profonde et belle.',             tag:'Classique'    },
+        { name:'ÉVA', meaning:"De l'hébreu, vie",                      desc:'Gracieuse et sensible, la première et la plus belle.',              tag:'Biblique'     },
+        { name:'ADA', meaning:'Du germanique "adal", noble',           desc:'Élégante et distinguée, une noblesse naturelle.',                   tag:'Germanique'   },
+        { name:'MIA', meaning:'Du latin "mea", chérie',                desc:'Tendre et affectueuse, toujours proche du cœur.',                   tag:'Latin'        },
+        { name:'LOU', meaning:'Du germanique, guerrière célèbre',      desc:'Forte et courageuse, un caractère fermement affirmé.',              tag:'Mixte'        },
+        { name:'JOY', meaning:"De l'anglais, joie",                    desc:'Lumineuse et joyeuse, elle illumine chaque pièce.',                 tag:'Français'     },
+        { name:'LYS', meaning:'Du français, fleur de lys',             desc:'Pure et délicate comme la fleur emblématique de France.',           tag:'Français'     },
+        { name:'PIA', meaning:'Du latin "pius", pieuse',               desc:'Douce et bienveillante, une sérénité naturelle.',                   tag:'Latin'        },
+        { name:'ELO', meaning:'Du germanique, noble',                  desc:'Originale et créative, toujours hors des sentiers battus.',         tag:'Germanique'   },
+        { name:'LYA', meaning:"De l'hébreu, lionne",                   desc:'Courageuse et fière, un esprit indomptable et libre.',              tag:'Hébreu'       },
+        { name:'EMY', meaning:'Du latin "aemulus", ambitieuse',        desc:'Déterminée et brillante, une future championne.',                   tag:'Latin'        },
+        { name:'MAY', meaning:'Du mois de mai, printemps',             desc:'Fraîche et printanière, elle apporte la douceur des fleurs.',       tag:'Nature'       },
+        { name:'AVA', meaning:'Du latin "avis", oiseau',               desc:'Libre et épanouie, comme un oiseau dans le ciel de Paris.',         tag:'Latin'        },
+        { name:'LIA', meaning:"De l'hébreu, liée",                    desc:'Attachante et loyale, toujours fidèle à ses proches.',              tag:'Hébreu'       },
+        { name:'NOR', meaning:'Du basque "nur", lumière',              desc:'Rayonnante et chaleureuse, une lumière douce et constante.',        tag:'Basque'       },
+      ],
+    };
+
+    let currentGender = 'boy';
+    let pool = [];
+
+    function setGender(g, btn) {
+      currentGender = g;
+      document.querySelectorAll('.gender-btn').forEach(b =>
+        b.classList.remove('boy','girl','both')
+      );
+      btn.classList.add(g);
+      pool = [];
+      document.getElementById('namesContainer').innerHTML = '';
+    }
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function generateNames() {
+      const container = document.getElementById('namesContainer');
+
+      let source;
+      if (currentGender === 'both') {
+        source = [
+          ...NAMES.boy.map(n => ({ ...n, gender: 'boy' })),
+          ...NAMES.girl.map(n => ({ ...n, gender: 'girl' })),
+        ];
+      } else {
+        source = NAMES[currentGender].map(n => ({ ...n, gender: currentGender }));
+      }
+
+      if (pool.length < 3) pool = shuffle(source);
+      const selected = pool.splice(0, 3);
+      if (pool.length === 0) pool = shuffle(source);
+
+      container.innerHTML = '';
+      selected.forEach((n, i) => {
+        const card = document.createElement('div');
+        card.className = `name-card ${n.gender === 'girl' ? 'girl' : ''}`;
+        card.innerHTML = `
+          <div class="name">${n.name}</div>
+          <div class="meaning">${n.meaning}</div>
+          <div class="desc">${n.desc}</div>
+          <span class="tag">${n.tag}</span>
+        `;
+        container.appendChild(card);
+        requestAnimationFrame(() => setTimeout(() => card.classList.add('visible'), 50 + i * 110));
+      });
+
+      // Generate portrait for the first name
+      generatePortrait(selected[0]);
+    }
+
+    // Generate on load
+    generateNames();
+  </script>
+</body>
+</html>
