@@ -22,25 +22,25 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          instances: [{ prompt }],
-          parameters: { sampleCount: 1, aspectRatio: '1:1' },
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
         }),
       }
     );
 
     const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message, code: data.error.code, details: data.error.details });
+    if (data.error) return res.status(500).json({ error: data.error.message, code: data.error.code });
 
-    const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-    if (!b64) return res.status(500).json({ error: 'No image returned', raw: data });
+    const imagePart = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (!imagePart) return res.status(500).json({ error: 'No image returned', raw: JSON.stringify(data).slice(0, 300) });
 
-    const buffer = Buffer.from(b64, 'base64');
-    res.setHeader('Content-Type', 'image/png');
+    const buffer = Buffer.from(imagePart.inlineData.data, 'base64');
+    res.setHeader('Content-Type', imagePart.inlineData.mimeType || 'image/png');
     res.setHeader('Cache-Control', 's-maxage=86400');
     res.send(buffer);
   } catch (err) {
