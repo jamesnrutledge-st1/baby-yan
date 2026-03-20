@@ -2,11 +2,23 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { prompt } = req.query;
-  if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
-
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+
+  // Debug mode: list available models
+  if (req.query.debug === '1') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const d = await r.json();
+    const imageModels = (d.models || []).filter(m =>
+      m.supportedGenerationMethods?.some(method =>
+        method.toLowerCase().includes('generate') || method.toLowerCase().includes('predict')
+      ) && (m.name?.toLowerCase().includes('imagen') || m.name?.toLowerCase().includes('image') || m.description?.toLowerCase().includes('image'))
+    ).map(m => ({ name: m.name, methods: m.supportedGenerationMethods }));
+    return res.status(200).json({ imageModels, total: d.models?.length });
+  }
+
+  const { prompt } = req.query;
+  if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
   try {
     const response = await fetch(
@@ -22,10 +34,10 @@ export default async function handler(req, res) {
     );
 
     const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    if (data.error) return res.status(500).json({ error: data.error.message, code: data.error.code, details: data.error.details });
 
     const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-    if (!b64) return res.status(500).json({ error: 'No image returned' });
+    if (!b64) return res.status(500).json({ error: 'No image returned', raw: data });
 
     const buffer = Buffer.from(b64, 'base64');
     res.setHeader('Content-Type', 'image/png');
